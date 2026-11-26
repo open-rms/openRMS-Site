@@ -22,7 +22,8 @@
     const id = page.params.id!;
     g = null;
     heardEvents = [];
-    api.gateway(id).then((x) => {
+    // A link from a filtered list carries ?serviceCode=, so channels under an unlisted code still show.
+    api.gateway(id, page.url.searchParams.get("serviceCode") ?? undefined).then((x) => {
       g = x;
       api.events({ gateway: x.id, limit: "8" }).then((r) => (heardEvents = r.events)).catch(() => {});
     }).catch((e) => (err = e.message));
@@ -126,7 +127,7 @@
                       <div class="text-muted-foreground text-sm">Winlink lists it as “{c.winlinkSupportedModes}”</div>
                     {/if}
                   </Table.Cell>
-                  <Table.Cell class="font-mono text-sm">{c.feedServiceCode ?? c.serviceCode}</Table.Cell>
+                  <Table.Cell class="font-mono text-sm">{(c.serviceCodes ?? [c.serviceCode]).join(" ")}</Table.Cell>
                   <Table.Cell class="text-sm">{c.operatingHours}</Table.Cell>
                   <Table.Cell class="text-sm">{c.antenna}{c.notes ? ` · ${c.notes}` : ""}</Table.Cell>
                 </Table.Row>

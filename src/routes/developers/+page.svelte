@@ -28,6 +28,13 @@
     Clients asking only for <code>PUBLIC</code> never get a gateway their VARA modem can't reach.
     Add <code>extensions=1</code> to get the real modem on every channel.
   </p>
+  <p>
+    Sysops can also list channels under their own group codes. A new code is <b>unlisted</b>: it never appears in filters,
+    stats, downloads or <code>/api/v1/service-codes</code>, and the feed serves it only when <code>ServiceCodes</code> names it
+    exactly. Unlisted is not secret: anyone who guesses a code sees those listings, and lookups of codes that aren't public
+    are rate-limited per IP. In the JSON API, read a channel's <code>serviceCodes</code> array; <code>serviceCode</code> is
+    deprecated.
+  </p>
 
   <h2 id="pat">Pat, EmComm Tools, 73 Linux</h2>
   <p>

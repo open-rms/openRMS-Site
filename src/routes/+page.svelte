@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, fmtFreq, ago, STATUS_LABEL, STATUS_HELP, type Gateway, type Modem, type Stats } from "#lib/api.ts";
+  import { api, fmtFreq, ago, STATUS_LABEL, STATUS_HELP, type Gateway, type Modem, type Stats, type ServiceCode } from "#lib/api.ts";
   import GatewayMap from "#lib/GatewayMap.svelte";
   import StatusDot from "#lib/StatusDot.svelte";
   import { Button } from "#lib/components/ui/button/index.ts";
@@ -18,6 +18,7 @@
 
   let modems = $state<Modem[]>([]);
   let stats = $state<Stats | null>(null);
+  let publicCodes = $state<ServiceCode[]>([]);
   let gateways = $state<Gateway[]>([]);
   let total = $state(0);
   let loading = $state(true);
@@ -42,9 +43,15 @@
 
   // Filters live in the URL so a filtered view can be shared.
   const sp = page.url.searchParams;
+  const CODE = /^[A-Z0-9]{1,16}$/;
+  const splitCodes = (v: string) => v.toUpperCase().split(/[,\s]+/).filter(Boolean);
+  // Codes from a shared link: until the public list arrives, keep them all as typed codes.
+  const urlCodes = splitCodes(sp.get("serviceCode") ?? "");
   let f = $state({
     modem: sp.get("modem")?.split(",").filter(Boolean) ?? [],
-    serviceCode: sp.get("serviceCode")?.toUpperCase().split(",").filter(Boolean) ?? [],
+    // Public codes picked with the chips; any other code is typed in otherCodes (exact match only).
+    serviceCode: [] as string[],
+    otherCodes: urlCodes.join(" "),
     band: sp.get("band") ?? "",
     status: sp.get("status") ?? "",
     source: sp.get("source") ?? "",
@@ -57,6 +64,20 @@
 
   api.modems().then((m) => (modems = m)).catch(() => {});
   api.stats().then((s) => (stats = s)).catch(() => {});
+  let otherDraft = $state(urlCodes.join(" "));
+  api.serviceCodes().then((r) => {
+    publicCodes = r.serviceCodes;
+    const pub = new Set(r.serviceCodes.map((c) => c.code));
+    f.serviceCode = urlCodes.filter((c) => pub.has(c));
+    otherDraft = f.otherCodes = urlCodes.filter((c) => !pub.has(c)).join(" ");
+  }).catch(() => {});
+  const otherList = $derived(splitCodes(f.otherCodes).filter((c) => CODE.test(c)));
+  const otherInvalid = $derived(splitCodes(otherDraft).some((c) => !CODE.test(c)));
+  // Applied on Enter or leaving the box, not per keystroke: each lookup of a non-public code counts
+  // toward a per-IP hourly limit, and a half-typed code is never what anyone meant.
+  const applyOther = () => { if (!otherInvalid) f.otherCodes = splitCodes(otherDraft).join(" "); };
+  // Gateway links carry typed codes, so channels under an unlisted code still show on the detail page.
+  const linkQuery = $derived(otherList.length ? `?${new URLSearchParams({ serviceCode: otherList.join(",") })}` : "");
 
   const GRID = /^[A-R]{2}[0-9]{2}([A-X]{2}([0-9]{2})?)?$/i;
   const gridPartial = $derived(!!f.grid.trim() && !GRID.test(f.grid.trim()));
@@ -64,7 +85,8 @@
   function params(): Record<string, string> {
     const p: Record<string, string> = {};
     if (f.modem.length) p.modem = f.modem.join(",");
-    if (f.serviceCode.length) p.serviceCode = f.serviceCode.join(",");
+    const codes = [...new Set([...f.serviceCode, ...otherList])];
+    if (codes.length) p.serviceCode = codes.join(",");
     // String(): number inputs hand over numbers, not text.
     for (const k of ["band", "status", "source", "q", "grid"] as const) if (String(f[k] ?? "").trim()) p[k] = String(f[k]).trim();
     const r = Number(String(f.radius ?? "").trim());
@@ -104,15 +126,9 @@
   function toggleCode(code: string) {
     f.serviceCode = f.serviceCode.includes(code) ? f.serviceCode.filter((c) => c !== code) : [...f.serviceCode, code];
   }
-  // Codes with gateways, PUBLIC first, then by how many gateways use them; a code from the URL always shows.
-  const serviceCodes = $derived.by(() => {
-    const counts = stats?.byServiceCode ?? {};
-    const codes = new Set([...Object.keys(counts), ...f.serviceCode]);
-    return [...codes].sort((a, b) => (a === "PUBLIC" ? -1 : b === "PUBLIC" ? 1 : (counts[b] ?? 0) - (counts[a] ?? 0) || a.localeCompare(b)))
-      .map((code) => ({ code, count: counts[code] ?? 0 }));
-  });
   function reset() {
-    f = { modem: [], serviceCode: [], band: "", status: "", source: "", claimed: false, q: "", grid: "", radius: "" };
+    otherDraft = "";
+    f = { modem: [], serviceCode: [], otherCodes: "", band: "", status: "", source: "", claimed: false, q: "", grid: "", radius: "" };
   }
   const modeSummary = (g: Gateway) => {
     const seen = new Map<string, string>();
@@ -170,19 +186,34 @@
       <div class="grid gap-1.5">
         <span class="text-sm font-medium" title="The Winlink service code each channel is listed under, as Pat and Winlink Express ask for it">Service code</span>
         <div class="flex flex-wrap gap-1.5">
-          {#each serviceCodes as { code, count }}
+          {#each publicCodes as { code, gateways: count, description }}
             <Button
               size="xs"
               variant={f.serviceCode.includes(code) ? "default" : "outline"}
               class="rounded-full font-mono"
               aria-pressed={f.serviceCode.includes(code)}
-              title="{count} gateway{count === 1 ? '' : 's'}"
+              title="{description ? `${description}. ` : ''}{count} gateway{count === 1 ? '' : 's'}"
               onclick={() => toggleCode(code)}
             >
               {code}
             </Button>
           {/each}
         </div>
+        <Input
+          id="othercode"
+          class="font-mono"
+          placeholder="Other code, e.g. your group's"
+          aria-label="Other service code"
+          autocomplete="off"
+          spellcheck="false"
+          bind:value={otherDraft}
+          aria-invalid={otherInvalid}
+          onkeydown={(e) => e.key === "Enter" && applyOther()}
+          onblur={applyOther}
+        />
+        <span class="text-xs text-muted-foreground">
+          {#if otherInvalid}Codes are 1–16 letters or digits.{:else}Exact code, then Enter. Group codes are never suggested or listed.{/if}
+        </span>
       </div>
       <div class="grid gap-1.5">
         <Label for="band">Band</Label>
@@ -232,7 +263,7 @@
   </Card.Root>
 
   <section class="min-w-0">
-    <GatewayMap {gateways} />
+    <GatewayMap {gateways} {linkQuery} />
     <div class="mt-3 mb-1.5 flex flex-wrap items-center justify-between gap-3">
       <span>
         {#if loading}Loading…{:else}<b>{total.toLocaleString()}</b> gateways{/if}
@@ -249,7 +280,7 @@
           {#each gateways.slice(0, shown) as g (g.id)}
             <Table.Row>
               <Table.Cell>
-                <a class="font-mono font-bold no-underline" href="/gateway/{g.id}">{g.callsign}</a>
+                <a class="font-mono font-bold no-underline" href="/gateway/{g.id}{linkQuery}">{g.callsign}</a>
                 <div class="text-muted-foreground text-sm">
                   {g.gridsquare ?? ""}
                   {#if g.heardOnAir}<Badge variant={g.heardOnAir.confidence === "confirmed" ? "open" : "outline"} title="Heard on the air by watchers {g.heardOnAir.lastHeard.slice(0, 10)}">heard</Badge>{" "}{/if}{#if g.source === "winlink"}<Badge variant="outline">Winlink</Badge>{#if g.claimed}{" "}<Badge variant="open" title="The sysop added details">sysop details</Badge>{/if}{:else if g.ownerVerified}<Badge variant="open" title="Callsign verified">verified</Badge>{/if}

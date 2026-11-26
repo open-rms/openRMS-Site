@@ -3,7 +3,8 @@
   import type { Gateway } from "./api.ts";
   import { onMount } from "svelte";
 
-  let { gateways, height = "420px", center }: { gateways: Gateway[]; height?: string; center?: [number, number] } = $props();
+  // linkQuery: appended to gateway links (e.g. "?serviceCode=X" so unlisted channels still show).
+  let { gateways, height = "420px", center, linkQuery = "" }: { gateways: Gateway[]; height?: string; center?: [number, number]; linkQuery?: string } = $props();
   let el: HTMLDivElement;
   let map: any;
   let layer: any;
@@ -48,7 +49,7 @@
         weight: 1.5,
         fillOpacity: g.status === "offline" ? 0.25 : 0.75,
       })
-        .bindPopup(`<b><a href="/gateway/${encodeURIComponent(g.id)}">${esc(g.callsign)}</a></b><br>${esc(modes)}<br><small>${esc(g.status)} · ${esc(g.source)}</small>`)
+        .bindPopup(`<b><a href="/gateway/${encodeURIComponent(g.id)}${esc(linkQuery)}">${esc(g.callsign)}</a></b><br>${esc(modes)}<br><small>${esc(g.status)} · ${esc(g.source)}</small>`)
         .addTo(layer);
     }
     layer.addTo(map);

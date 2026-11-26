@@ -4,6 +4,7 @@
   import { session } from "#lib/auth.ts";
   import {
     api, ago, hasPerm, RANK, type Permissions, type StaffRole, type StaffUser, type StaffClub, type StaffReport, type StaffImport, type StaffAudit, type StaffWatcher,
+    type StaffServiceCode, UNLISTED_NOTE,
   } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.ts";
   import { Input } from "#lib/components/ui/input/index.ts";
@@ -27,6 +28,8 @@
   let clubs = $state<StaffClub[]>([]);
   let reports = $state<StaffReport[]>([]);
   let imports = $state<StaffImport[]>([]);
+  let codes = $state<StaffServiceCode[]>([]);
+  let codeDesc = $state<Record<string, string>>({});
   let audit = $state<StaffAudit[]>([]);
   let watchers = $state<StaffWatcher[]>([]);
   let publishClients = $state(false);
@@ -56,6 +59,7 @@
       { id: "clubs", label: "Clubs", show: hasPerm(acctPerms, "club", "list") },
       { id: "reports", label: "Reports", show: hasPerm(perms, "report", "list") },
       { id: "imports", label: "Imports", show: hasPerm(perms, "import", "view") },
+      { id: "codes", label: "Service codes", show: hasPerm(perms, "servicecode", "view") },
       { id: "watchers", label: "Watchers", show: hasPerm(perms, "watcher", "list") },
       { id: "settings", label: "Settings & opt-outs", show: hasPerm(perms, "watcher", "list") },
       { id: "audit", label: "Atlas log", show: hasPerm(perms, "audit", "view") },
@@ -70,6 +74,10 @@
       if (tab === "clubs") clubs = (await api.staff.clubs()).clubs;
       if (tab === "reports") reports = (await api.staff.reports()).reports;
       if (tab === "imports") imports = (await api.staff.imports()).imports;
+      if (tab === "codes") {
+        codes = (await api.staff.serviceCodes()).serviceCodes;
+        codeDesc = Object.fromEntries(codes.map((c) => [c.code, c.description]));
+      }
       if (tab === "audit") audit = (await api.staff.audit()).entries;
       if (tab === "account-audit") accountAudit = (await api.staff.accountAudit()).entries;
       if (tab === "watchers") watchers = (await api.staff.watchers()).watchers;
@@ -231,6 +239,41 @@
               <Table.Cell class="text-sm">{i.gateways ?? ""}</Table.Cell>
               <Table.Cell class="text-sm">{i.channels ?? ""}</Table.Cell>
               <Table.Cell class="text-sm text-muted-foreground">{i.message ?? ""}</Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    </Card.Content></Card.Root>
+  {:else if tab === "codes"}
+    <Card.Root><Card.Content>
+      <p class="text-sm text-muted-foreground mt-0">
+        Public codes appear in the Site's filter chips, in stats and in downloads. Unlisted codes are never listed anywhere and
+        match only an exact search. {UNLISTED_NOTE} Promote a code only when its group wants it listed; never promote a private
+        group's code (MARS, SHARES, agencies).
+      </p>
+      <Table.Root>
+        <Table.Header><Table.Row><Table.Head>Code</Table.Head><Table.Head>Visibility</Table.Head><Table.Head>Gateways</Table.Head><Table.Head>Description</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+        <Table.Body>
+          {#each codes as c (c.code)}
+            <Table.Row>
+              <Table.Cell class="font-mono font-bold">{c.code}</Table.Cell>
+              <Table.Cell>{#if c.visibility === "public"}<Badge variant="open">public</Badge>{:else}<Badge variant="outline">unlisted</Badge>{/if}</Table.Cell>
+              <Table.Cell class="text-sm">{c.gateways} <span class="text-muted-foreground">({c.channels} ch)</span></Table.Cell>
+              <Table.Cell class="text-sm">
+                {#if hasPerm(perms, "servicecode", "edit")}
+                  <Input class="h-8" aria-label="Description of {c.code}" bind:value={codeDesc[c.code]}
+                    onchange={() => act(() => api.staff.setServiceCode(c.code, { description: codeDesc[c.code] ?? "" }), `${c.code} description saved.`)} />
+                {:else}{c.description}{/if}
+              </Table.Cell>
+              <Table.Cell class="text-right">
+                {#if hasPerm(perms, "servicecode", "edit") && !["PUBLIC", "EMCOMM"].includes(c.code)}
+                  {#if c.visibility === "public"}
+                    <Button variant="outline" size="sm" onclick={() => act(() => api.staff.setServiceCode(c.code, { visibility: "unlisted" }), `${c.code} is unlisted.`)}>Unlist</Button>
+                  {:else}
+                    <Button variant="outline" size="sm" onclick={() => act(() => api.staff.setServiceCode(c.code, { visibility: "public" }), `${c.code} is public.`)}>Make public</Button>
+                  {/if}
+                {/if}
+              </Table.Cell>
             </Table.Row>
           {/each}
         </Table.Body>

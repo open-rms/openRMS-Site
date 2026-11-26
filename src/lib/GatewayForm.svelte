@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { api, ApiError, type Gateway, type Modem } from "./api.ts";
+  import { api, ApiError, UNLISTED_NOTE, type Gateway, type Modem } from "./api.ts";
   import { Checkbox } from "./components/ui/checkbox/index.ts";
   import { NativeSelect } from "./components/ui/native-select/index.ts";
   import { Button } from "./components/ui/button/index.ts";
@@ -19,12 +19,17 @@
 
   interface Ch {
     frequencyKhz: number | null; modem: string; variant: string; modemVersion: string; serviceCode: string;
+    /** More codes, space or comma separated. */
+    extraCodes: string;
     operatingHours: string; antenna: string; notes: string;
   }
-  const blank = (): Ch => ({ frequencyKhz: null, modem: "mercury", variant: "", modemVersion: "", serviceCode: "PUBLIC", operatingHours: "00-23", antenna: "", notes: "" });
+  const blank = (): Ch => ({ frequencyKhz: null, modem: "mercury", variant: "", modemVersion: "", serviceCode: "PUBLIC", extraCodes: "", operatingHours: "00-23", antenna: "", notes: "" });
 
   let modems = $state<Modem[]>([]);
   api.modems().then((m) => (modems = m));
+  let publicCodes = $state<Set<string> | null>(null);
+  api.serviceCodes().then((r) => (publicCodes = new Set(r.serviceCodes.map((c) => c.code)))).catch(() => {});
+  const codesOf = (c: Ch) => [...new Set([c.serviceCode || "PUBLIC", ...c.extraCodes.split(/[,\s]+/)].map((x) => x.trim().toUpperCase()).filter(Boolean))];
 
   // The form edits a copy taken when it opens.
   const e = untrack(() => existing);
@@ -49,12 +54,14 @@
     },
     channels: (e?.channels.map((c) => ({
       frequencyKhz: c.frequencyHz / 1000, modem: c.modem, variant: c.variant ?? "", modemVersion: c.modemVersion ?? "",
-      serviceCode: c.serviceCode, operatingHours: c.operatingHours, antenna: c.antenna, notes: c.notes,
+      serviceCode: c.serviceCode, extraCodes: (c.extraServiceCodes ?? []).join(" "), operatingHours: c.operatingHours, antenna: c.antenna, notes: c.notes,
     })) ?? [blank()]) as Ch[],
   });
   let err = $state("");
   let issues = $state<string[]>([]);
   let busy = $state(false);
+  /** Codes on this form that aren't public yet: they will be unlisted. */
+  const unlistedCodes = $derived(publicCodes ? [...new Set(form.channels.flatMap(codesOf))].filter((x) => !publicCodes!.has(x)) : []);
 
   const modem = (id: string) => modems.find((m) => m.id === id);
 
@@ -62,7 +69,7 @@
     const m = modem(c.modem);
     if (!m) return "";
     if (!m.compat) return "Not in the Winlink-compatible feed yet (no client can dial it). Shown on the site and in the API.";
-    if (m.compat.serviceCode) return `Pat and other clients see it as “${m.compat.supportedModes}” under service code ${m.compat.serviceCode}.`;
+    if (m.compat.serviceCode) return `Pat and other clients see it as “${m.compat.supportedModes}” under service code ${m.compat.serviceCode} (in place of PUBLIC or EMCOMM; group codes stay as you type them).`;
     return "";
   }
 
@@ -82,7 +89,8 @@
         modem: c.modem,
         variant: c.variant || null,
         modemVersion: c.modemVersion || null,
-        serviceCode: c.serviceCode || "PUBLIC",
+        serviceCode: (c.serviceCode || "PUBLIC").trim().toUpperCase(),
+        extraServiceCodes: codesOf(c).slice(1),
         operatingHours: c.operatingHours || "00-23",
         antenna: c.antenna,
         notes: c.notes,
@@ -153,12 +161,21 @@
             </div>
             <div class="grid content-start gap-1.5"><Label for="mv{i}">Modem version</Label><Input id="mv{i}" bind:value={c.modemVersion} /></div>
             <div class="grid content-start gap-1.5"><Label for="sc{i}">Service code</Label><Input id="sc{i}" class="font-mono" bind:value={c.serviceCode} /></div>
+            <div class="grid content-start gap-1.5">
+              <Label for="xc{i}">Also listed under</Label>
+              <Input id="xc{i}" class="font-mono" placeholder="e.g. EMCOMM or a group code" autocomplete="off" bind:value={c.extraCodes} />
+            </div>
             <div class="grid content-start gap-1.5"><Label for="h{i}">Hours (UTC)</Label><Input id="h{i}" bind:value={c.operatingHours} /></div>
             <div class="grid content-start gap-1.5"><Label for="a{i}">Antenna</Label><Input id="a{i}" bind:value={c.antenna} /></div>
             <div class="grid content-start gap-1.5"><Label for="n{i}">Notes</Label><Input id="n{i}" bind:value={c.notes} /></div>
           </div>
           <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
             <span class="text-muted-foreground text-sm">{compatNote(c)}</span>
+            {#if unlistedCodes.length && codesOf(c).some((x) => unlistedCodes.includes(x))}
+              <span class="basis-full text-sm" role="note">
+                <b class="font-mono">{codesOf(c).filter((x) => unlistedCodes.includes(x)).join(", ")}</b>: {UNLISTED_NOTE}
+              </span>
+            {/if}
             {#if form.channels.length > 1}
               <Button variant="destructive" size="sm" onclick={() => form.channels.splice(i, 1)}>Remove channel</Button>
             {/if}

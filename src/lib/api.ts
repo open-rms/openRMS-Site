@@ -6,8 +6,14 @@ export type Source = "openrms" | "winlink";
 
 export interface Channel {
   id: string; frequencyHz: number; band: string | null; modem: string; modemLabel: string; variant: string | null;
-  modemVersion: string | null; serviceCode: string;
-  /** Code Pat sees in the compat feed (Mercury/XARA/Data2G are forced to their own). */
+  modemVersion: string | null;
+  /** Public API: the service codes this channel is listed under that you may see (use this). */
+  serviceCodes?: string[];
+  /** Public API: deprecated, serviceCodes[0]. Owner API: the stored main code. */
+  serviceCode: string;
+  /** Owner API only: the other stored codes. */
+  extraServiceCodes?: string[];
+  /** Deprecated: serviceCodes[0]. */
   feedServiceCode?: string; operatingHours: string; antenna: string; radioRange: string;
   gridsquare: string | null; baud: string; notes: string; winlinkSupportedModes: string | null; compatSupportedModes: string | null;
 }
@@ -55,6 +61,13 @@ export interface StaffUser {
 }
 export interface StaffClub { id: string; name: string; callsign: string; callsignVerified: boolean | null; callsignVerifiedMethod: string | null; members: string | null }
 export interface StaffReport { id: number; gateway_id: string; callsign: string; reason: string; created_at: string }
+export interface ServiceCode { code: string; description: string; gateways: number }
+export interface StaffServiceCode extends ServiceCode {
+  visibility: "public" | "unlisted"; channels: number; updatedAt: string; updatedBy: string | null;
+}
+/** Shown wherever a sysop or a group picks a code. */
+export const UNLISTED_NOTE =
+  "A new code starts unlisted: it is never shown in filters, stats or downloads, and only someone who types the exact code finds your listing. Unlisted is not secret, though: anyone who guesses the code sees it.";
 export interface StaffImport { id: number; source: string; started_at: string; finished_at: string | null; ok: boolean | null; gateways: number | null; channels: number | null; message: string | null }
 export interface StaffAudit { id: number; actor_callsign: string | null; action: string; target: string; detail: string | null; created_at: string }
 
@@ -137,7 +150,9 @@ const acct = <T>(path: string, init: RequestInit = {}) => send<T>(`${ACCOUNTS_UR
 export const api = {
   gateways: (params: Record<string, string>) =>
     call<{ total: number; gateways: Gateway[] }>(`/api/v1/gateways?${new URLSearchParams(params)}`),
-  gateway: (id: string) => call<Gateway>(`/api/v1/gateways/${encodeURIComponent(id)}`),
+  gateway: (id: string, serviceCode?: string) =>
+    call<Gateway>(`/api/v1/gateways/${encodeURIComponent(id)}${serviceCode ? `?${new URLSearchParams({ serviceCode })}` : ""}`),
+  serviceCodes: () => call<{ serviceCodes: ServiceCode[] }>("/api/v1/service-codes"),
   modems: () => call<Modem[]>("/api/v1/modems"),
   stats: () => call<Stats>("/api/v1/stats"),
   myGateways: () => call<{ gateways: Gateway[] }>("/api/v1/me/gateways"),
@@ -163,6 +178,9 @@ export const api = {
     hide: (gatewayId: string, hidden: boolean, reason: string) =>
       call<{ ok: true }>(`/api/v1/admin/gateways/${gatewayId}/hide`, { method: "POST", body: JSON.stringify({ hidden, reason }) }),
     imports: () => call<{ imports: StaffImport[] }>("/api/v1/admin/imports"),
+    serviceCodes: () => call<{ serviceCodes: StaffServiceCode[] }>("/api/v1/admin/service-codes"),
+    setServiceCode: (code: string, patch: { visibility?: "public" | "unlisted"; description?: string }) =>
+      call<StaffServiceCode>(`/api/v1/admin/service-codes/${encodeURIComponent(code)}`, { method: "PATCH", body: JSON.stringify(patch) }),
     runImport: () => call<{ gateways: number; channels: number }>("/api/v1/admin/imports/winlink", { method: "POST" }),
     audit: () => call<{ entries: StaffAudit[] }>("/api/v1/admin/audit"),
     accountAudit: () => acct<{ entries: StaffAudit[] }>("/api/v1/admin/audit"),
