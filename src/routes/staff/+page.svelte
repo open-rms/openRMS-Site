@@ -4,7 +4,7 @@
   import { session } from "#lib/auth.ts";
   import {
     api, ago, hasPerm, RANK, type Permissions, type StaffRole, type StaffUser, type StaffClub, type StaffReport, type StaffImport, type StaffAudit, type StaffWatcher,
-    type StaffServiceCode, type CodeSearch, UNLISTED_NOTE,
+    type StaffServiceCode, type CodeSearch, UNLISTED_NOTE, auditTime, auditDetail,
   } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.ts";
   import { Input } from "#lib/components/ui/input/index.ts";
@@ -379,11 +379,11 @@
         <Table.Body>
           {#each audit as a (a.id)}
             <Table.Row>
-              <Table.Cell class="text-sm">{ago(a.created_at)}</Table.Cell>
+              <Table.Cell class="text-sm" title={auditTime(a) ? new Date(auditTime(a)!).toLocaleString() : ""}>{ago(auditTime(a))}</Table.Cell>
               <Table.Cell class="font-mono text-sm">{a.actor_callsign ?? "server"}</Table.Cell>
               <Table.Cell class="text-sm">{a.action}</Table.Cell>
-              <Table.Cell class="text-sm font-mono">{a.target}</Table.Cell>
-              <Table.Cell class="text-sm text-muted-foreground font-mono">{a.detail ?? ""}</Table.Cell>
+              <Table.Cell class="text-sm font-mono">{a.target ?? ""}</Table.Cell>
+              <Table.Cell class="text-sm text-muted-foreground font-mono">{auditDetail(a.detail)}</Table.Cell>
             </Table.Row>
           {/each}
         </Table.Body>
@@ -396,11 +396,11 @@
         <Table.Body>
           {#each accountAudit as a (a.id)}
             <Table.Row>
-              <Table.Cell class="text-sm">{ago(a.created_at)}</Table.Cell>
+              <Table.Cell class="text-sm" title={auditTime(a) ? new Date(auditTime(a)!).toLocaleString() : ""}>{ago(auditTime(a))}</Table.Cell>
               <Table.Cell class="font-mono text-sm">{a.actor_callsign ?? "server"}</Table.Cell>
               <Table.Cell class="text-sm">{a.action}</Table.Cell>
-              <Table.Cell class="text-sm font-mono">{a.target}</Table.Cell>
-              <Table.Cell class="text-sm text-muted-foreground font-mono">{a.detail ?? ""}</Table.Cell>
+              <Table.Cell class="text-sm font-mono">{a.target ?? ""}</Table.Cell>
+              <Table.Cell class="text-sm text-muted-foreground font-mono">{auditDetail(a.detail)}</Table.Cell>
             </Table.Row>
           {/each}
         </Table.Body>

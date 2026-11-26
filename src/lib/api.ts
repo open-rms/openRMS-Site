@@ -74,7 +74,25 @@ export interface CodeSearch { code: string; searchers: number; searches: number;
 export const UNLISTED_NOTE =
   "A new code starts unlisted: it is never shown in filters, stats or downloads, and only someone who types the exact code finds your listing. Unlisted is not secret, though: anyone who guesses the code sees it.";
 export interface StaffImport { id: number; source: string; started_at: string; finished_at: string | null; ok: boolean | null; gateways: number | null; channels: number | null; message: string | null }
-export interface StaffAudit { id: number; actor_callsign: string | null; action: string; target: string; detail: string | null; created_at: string }
+/** Audit entry. Atlas sends created_at and detail as JSON text; Accounts sends at and detail as JSON. */
+export interface StaffAudit { id: number; actor_callsign: string | null; action: string; target: string | null; detail: unknown; created_at?: string; at?: string }
+/** When an audit entry happened, whichever service it came from. */
+export const auditTime = (a: StaffAudit) => a.created_at ?? a.at ?? null;
+/** An audit entry's detail as short readable text: "from: user, to: admin". */
+export function auditDetail(d: unknown): string {
+  if (d == null || d === "") return "";
+  let v = d;
+  if (typeof v === "string") {
+    try { v = JSON.parse(v); } catch { return v as string; }
+  }
+  if (v && typeof v === "object" && !Array.isArray(v)) {
+    return Object.entries(v as Record<string, unknown>)
+      .filter(([, x]) => x !== undefined && x !== null && x !== "")
+      .map(([k, x]) => `${k}: ${typeof x === "object" ? JSON.stringify(x) : String(x)}`)
+      .join(", ");
+  }
+  return typeof v === "string" ? v : JSON.stringify(v);
+}
 
 export interface Watcher {
   id: string; name: string; gridsquare: string | null; locationPrecision: "grid4" | "grid6" | "hidden"; public: boolean;
