@@ -5,7 +5,8 @@
 watchers, a sysop dashboard (list and edit gateways, confirm "still on the air", API keys), and developer
 docs for the API and Pat. · **Consumes:** the openRMS-Atlas API, and openRMS-Accounts for
 sign-in, clubs and staff user tools (the Site gets short-lived JWTs from Accounts for Atlas calls). · **Status:** alpha.
-· **License:** AGPL-3.0-or-later (code), CC-BY-4.0 (content).
+· **License:** AGPL-3.0-or-later (code, `LICENSE`), CC-BY-4.0 (written page content and docs,
+`LICENSE-CC-BY-4.0`).
 
 SvelteKit 3 (static SPA via adapter-static), Svelte 5, Leaflet with OpenStreetMap tiles, and
 the Better Auth client.
