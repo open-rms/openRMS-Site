@@ -55,7 +55,8 @@
     if (!window.confirm(`Delete ${w.name} and everything it uploaded?`)) return;
     run(() => api.deleteWatcher(w.id), "Watcher deleted.");
   }
-  const live = (w: Watcher) => !!w.lastSeenAt && Date.now() - new Date(w.lastSeenAt).getTime() < 10 * 60_000;
+  // Watchers upload every 10 minutes; "live" means a batch within the last 25.
+  const live = (w: Watcher) => !!w.lastSeenAt && Date.now() - new Date(w.lastSeenAt).getTime() < 25 * 60_000;
 </script>
 
 <Card.Root>

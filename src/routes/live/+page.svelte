@@ -51,7 +51,8 @@
     <h1 class="mb-1">On the air</h1>
     <p class="m-0 max-w-[62ch] text-muted-foreground">
       Mercury connections heard by community <a href="/contributors">watchers</a>: independent evidence of which gateways are really
-      on the air, and where. Run a watcher yourself and add it on your dashboard.
+      on the air, and where. Watchers upload every 10 minutes, so new connections show up with up to that much delay.
+      Run a watcher yourself and add it on your dashboard.
     </p>
   </div>
   <div class="flex items-center gap-3">
