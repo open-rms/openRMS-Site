@@ -1,6 +1,6 @@
-// Typed client for the openRMS Directory API (openRMS-Spec/directory/openapi.yaml) and the
+// Typed client for the openRMS Atlas API (openRMS-Spec/atlas/openapi.yaml) and the
 // parts of openRMS-Accounts the Site uses (openRMS-Spec/accounts/identity.md).
-import { ACCOUNTS_URL, DIRECTORY_AUDIENCE, DIRECTORY_URL } from "./config.ts";
+import { ACCOUNTS_URL, ATLAS_AUDIENCE, ATLAS_URL } from "./config.ts";
 export type Status = "online" | "listed" | "stale" | "offline";
 export type Source = "openrms" | "winlink";
 
@@ -87,18 +87,18 @@ export class ApiError extends Error {
   }
 }
 
-// ── Directory calls carry a short-lived Accounts token (identity.md §3a) ───────────────
+// ── Atlas calls carry a short-lived Accounts token (identity.md §3a) ───────────────
 let cached: { token: string | null; until: number } | null = null;
 
-/** Clear the cached Directory token (sign-out, account switch). */
-export function clearDirectoryToken() {
+/** Clear the cached Atlas token (sign-out, account switch). */
+export function clearAtlasToken() {
   cached = null;
 }
 
-async function directoryToken(): Promise<string | null> {
+async function atlasToken(): Promise<string | null> {
   if (cached && cached.until > Date.now()) return cached.token;
   try {
-    const r = await fetch(`${ACCOUNTS_URL}/api/v1/token?aud=${encodeURIComponent(DIRECTORY_AUDIENCE)}`, { credentials: "include" });
+    const r = await fetch(`${ACCOUNTS_URL}/api/v1/token?aud=${encodeURIComponent(ATLAS_AUDIENCE)}`, { credentials: "include" });
     if (!r.ok) {
       cached = { token: null, until: Date.now() + 30_000 }; // signed out: don't ask again for a while
       return null;
@@ -112,10 +112,10 @@ async function directoryToken(): Promise<string | null> {
   }
 }
 
-async function send<T>(url: string, init: RequestInit, auth: "directory" | "accounts"): Promise<T> {
+async function send<T>(url: string, init: RequestInit, auth: "atlas" | "accounts"): Promise<T> {
   const headers: Record<string, string> = { ...(init.body ? { "Content-Type": "application/json" } : {}), ...((init.headers as Record<string, string>) ?? {}) };
-  if (auth === "directory") {
-    const t = await directoryToken();
+  if (auth === "atlas") {
+    const t = await atlasToken();
     if (t) headers.Authorization = `Bearer ${t}`;
   }
   const res = await fetch(url, { ...init, headers, credentials: auth === "accounts" ? "include" : "omit" });
@@ -125,8 +125,8 @@ async function send<T>(url: string, init: RequestInit, auth: "directory" | "acco
   return body as T;
 }
 
-/** Directory API (gateways, watchers, keys, Directory staff tools). */
-const call = <T>(path: string, init: RequestInit = {}) => send<T>(`${DIRECTORY_URL}${path}`, init, "directory");
+/** Atlas API (gateways, watchers, keys, Atlas staff tools). */
+const call = <T>(path: string, init: RequestInit = {}) => send<T>(`${ATLAS_URL}${path}`, init, "atlas");
 /** openRMS-Accounts API (profile, clubs, users and roles). */
 const acct = <T>(path: string, init: RequestInit = {}) => send<T>(`${ACCOUNTS_URL}${path}`, init, "accounts");
 

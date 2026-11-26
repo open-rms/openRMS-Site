@@ -4,9 +4,9 @@
 </script>
 
 <div class="max-w-[760px] [&_h2]:mt-6 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6">
-  <h1>About the openRMS Directory</h1>
+  <h1>About the openRMS Atlas</h1>
   <p>
-    Radio email shouldn't depend on one organization deciding which modes count. The openRMS Directory lists
+    Radio email shouldn't depend on one organization deciding which modes count. The openRMS Atlas lists
     gateways on <b>every</b> mode, including open ones like Mercury, Data2G, modem73, ION HF and ARDOP, next to the Winlink
     network's gateways. It records the <b>real waveform</b> a gateway runs, not only what its host software pretends to be.
   </p>

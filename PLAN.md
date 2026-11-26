@@ -1,7 +1,7 @@
 # openRMS-Site
 
-**Role:** the public website: project home, docs, and the human interface to the Directory.
-It's **just another client of the Directory API**, with no private back end, which proves the
+**Role:** the public website: project home, docs, and the human interface to Atlas.
+It's **just another client of Atlas API**, with no private back end, which proves the
 API is complete.
 **License:** AGPL-3.0-or-later (code), CC-BY-4.0 (content)
 

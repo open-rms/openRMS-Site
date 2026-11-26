@@ -34,7 +34,7 @@
     gateways = (await api.myGateways()).gateways;
     claimable = (await api.claimable()).gateways;
     myCalls = ((await api.me()).callsigns ?? []).map((m) => m.callsign);
-    // Gateway keys are owned by the Directory (identity.md §5).
+    // Gateway keys are owned by Atlas (identity.md §5).
     keys = (await api.gatewayKeys()).keys.map((k) => ({ ...k, metadata: { gatewayIds: k.gatewayIds ?? [] } }));
   }
   $effect(() => {
@@ -47,7 +47,7 @@
     load();
   }
   async function remove(g: Gateway) {
-    if (!window.confirm(`Remove ${g.callsign} from the directory?`)) return;
+    if (!window.confirm(`Remove ${g.callsign} from Atlas?`)) return;
     await api.deleteGateway(g.id);
     load();
   }

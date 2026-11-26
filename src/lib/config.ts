@@ -1,10 +1,10 @@
 // Where the Site's services live. Development: both are proxied by Vite (vite.config.ts), so
 // the browser stays on one origin. Production: set VITE_ACCOUNTS_URL=https://auth.openrms.dev,
-// VITE_DIRECTORY_URL=https://directory.openrms.dev and VITE_DIRECTORY_AUDIENCE to the same.
+// VITE_ATLAS_URL=https://atlas.openrms.dev and VITE_ATLAS_AUDIENCE to the same.
 const env = import.meta.env as Record<string, string | undefined>;
 export const ACCOUNTS_URL = env.VITE_ACCOUNTS_URL ?? "/accounts";
-export const DIRECTORY_URL = env.VITE_DIRECTORY_URL ?? "";
-export const DIRECTORY_AUDIENCE = env.VITE_DIRECTORY_AUDIENCE ?? "http://localhost:8787";
+export const ATLAS_URL = env.VITE_ATLAS_URL ?? "";
+export const ATLAS_AUDIENCE = env.VITE_ATLAS_AUDIENCE ?? "http://localhost:8787";
 
 /** Absolute form of a possibly relative base, for libraries that need a full URL. */
 export const absolute = (base: string) => (typeof location !== "undefined" ? new URL(base || "/", location.origin).href.replace(/\/$/, "") : base);

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ACCOUNTS_URL } from "#lib/config.ts";
-  const origin = typeof location !== "undefined" ? location.origin : "https://directory.example";
+  const origin = typeof location !== "undefined" ? location.origin : "https://atlas.example";
 </script>
 
 <div class="max-w-[820px] [&_h2]:mt-8 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6">
@@ -37,11 +37,11 @@
 pat rmslist --mode varahf</pre>
   <p>
     If your Pat config has <code>"service_codes": ["PUBLIC", "MERCURY"]</code>, Pat looks for
-    <code>rmslist-PUBLIC-MERCURY.json</code> instead. The <code>pat-rmslist-sync.sh</code> script in the openRMS-Directory repository
+    <code>rmslist-PUBLIC-MERCURY.json</code> instead. The <code>pat-rmslist-sync.sh</code> script in the openRMS-Atlas repository
     reads Pat's config, names the file correctly, checks the download, and is safe to run from cron:
   </p>
-  <pre>OPENRMS_DIRECTORY_URL={origin} pat-rmslist-sync.sh
-# crontab: 17 */6 * * * OPENRMS_DIRECTORY_URL={origin} /usr/local/bin/pat-rmslist-sync.sh</pre>
+  <pre>OPENRMS_ATLAS_URL={origin} pat-rmslist-sync.sh
+# crontab: 17 */6 * * * OPENRMS_ATLAS_URL={origin} /usr/local/bin/pat-rmslist-sync.sh</pre>
   <p class="text-muted-foreground text-sm">
     <code>pat rmslist --force-download</code> replaces the file with Winlink's list again; the next sync restores it.
     That is also why 73 Linux's PatMenu doesn't show openRMS gateways yet: its list refresh forces a download.

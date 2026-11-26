@@ -3,11 +3,11 @@ import tailwindcss from "@tailwindcss/vite";
 import adapter from "@sveltejs/adapter-static";
 import { defineConfig } from "vite";
 
-// The Site is a static single-page app: a client of the Directory API and of openRMS-Accounts.
-// In development Vite proxies both, so the browser stays on one origin: /api → Directory,
+// The Site is a static single-page app: a client of Atlas API and of openRMS-Accounts.
+// In development Vite proxies both, so the browser stays on one origin: /api → Atlas,
 // /accounts/* → Accounts (prefix stripped; both services have /api/v1/me and /api/v1/admin).
 const env = (globalThis as any).process?.env ?? {};
-const API = env.DIRECTORY_URL ?? "http://localhost:8787";
+const API = env.ATLAS_URL ?? "http://localhost:8787";
 const ACCOUNTS = env.ACCOUNTS_URL ?? "http://localhost:8789";
 
 export default defineConfig({

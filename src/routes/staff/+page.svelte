@@ -16,7 +16,7 @@
   import * as Tabs from "#lib/components/ui/tabs/index.ts";
 
   let me = $state<{ id: string; role: StaffRole } | null>(null);
-  let perms = $state<Permissions>({}); // Directory permissions (listings, watchers, settings)
+  let perms = $state<Permissions>({}); // Atlas permissions (listings, watchers, settings)
   let acctPerms = $state<Permissions>({}); // openRMS-Accounts permissions (users, roles, clubs)
   let accountAudit = $state<StaffAudit[]>([]);
   let tab = $state("users");
@@ -58,7 +58,7 @@
       { id: "imports", label: "Imports", show: hasPerm(perms, "import", "view") },
       { id: "watchers", label: "Watchers", show: hasPerm(perms, "watcher", "list") },
       { id: "settings", label: "Settings & opt-outs", show: hasPerm(perms, "watcher", "list") },
-      { id: "audit", label: "Directory log", show: hasPerm(perms, "audit", "view") },
+      { id: "audit", label: "Atlas log", show: hasPerm(perms, "audit", "view") },
       { id: "account-audit", label: "Account log", show: hasPerm(acctPerms, "audit", "view") },
     ].filter((t) => t.show),
   );

@@ -1,7 +1,7 @@
 {
   "name": "openrms-site",
   "version": "0.1.0",
-  "description": "openRMS Directory website: a pure client of the Directory API",
+  "description": "openRMS Atlas website: a pure client of Atlas API",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

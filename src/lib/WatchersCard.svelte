@@ -72,7 +72,7 @@
       <div class="bg-primary-soft mb-3 rounded-lg p-3">
         <b>Upload key for {newKey.name}. Copy it now; it is not shown again.</b>
         <pre>{newKey.key}</pre>
-        <div class="text-sm">In the watcher's settings: Directory URL <code>{origin}</code>, key as above.</div>
+        <div class="text-sm">In the watcher's settings: Atlas URL <code>{origin}</code>, key as above.</div>
         <Button class="mt-2" variant="outline" size="sm" onclick={() => (newKey = null)}>Done</Button>
       </div>
     {/if}

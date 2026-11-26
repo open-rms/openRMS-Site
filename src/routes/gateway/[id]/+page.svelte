@@ -48,7 +48,7 @@
       });
   });
   async function hide() {
-    const reason = window.prompt(`Hide ${g!.callsign} from the directory? Reason:`);
+    const reason = window.prompt(`Hide ${g!.callsign} from Atlas? Reason:`);
     if (!reason) return;
     try {
       await api.staff.hide(g!.id, true, reason);
