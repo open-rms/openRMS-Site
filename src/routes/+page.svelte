@@ -24,6 +24,8 @@
   let loading = $state(true);
   let err = $state("");
   let shown = $state(100);
+  /** When a distance filter leaves nothing: how many match without it. */
+  let elsewhere = $state<number | null>(null);
 
   const MI = 1.609344; // km per mile
   function initialUnit(): "km" | "mi" {
@@ -109,6 +111,12 @@
         const r = await api.gateways(p);
         gateways = r.gateways;
         total = r.total;
+        elsewhere = null;
+        if (r.total === 0 && p.radiusKm) {
+          // Say so when the distance is what hides everything (e.g. MERCURY has no gateway nearby).
+          const { grid: _g, radiusKm: _r, ...rest } = p;
+          elsewhere = (await api.gateways({ ...rest, limit: "1" })).total;
+        }
         shown = 100;
         // Update the address bar without navigating, so the filter field keeps focus.
         replaceState(`?${new URLSearchParams(p)}`, {});
@@ -267,6 +275,12 @@
     <div class="mt-3 mb-1.5 flex flex-wrap items-center justify-between gap-3">
       <span>
         {#if loading}Loading…{:else}<b>{total.toLocaleString()}</b> gateways{/if}
+        {#if !loading && elsewhere}
+          <span class="text-muted-foreground">
+            within {f.radius} {unit === "mi" ? "miles" : "km"} of {f.grid.toUpperCase()}; {elsewhere.toLocaleString()} match farther away.
+          </span>
+          <Button variant="link" size="sm" class="h-auto p-0" onclick={() => (f.radius = "")}>Show all distances</Button>
+        {/if}
         {#if err}<span class="text-destructive"> {err}</span>{/if}
       </span>
       <a class="text-sm" href="/api/v1/dumps/latest.csv">Download CSV</a>

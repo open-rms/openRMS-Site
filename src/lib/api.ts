@@ -64,7 +64,12 @@ export interface StaffReport { id: number; gateway_id: string; callsign: string;
 export interface ServiceCode { code: string; description: string; gateways: number }
 export interface StaffServiceCode extends ServiceCode {
   visibility: "public" | "unlisted"; channels: number; updatedAt: string; updatedBy: string | null;
+  /** Distinct sysops (accounts or clubs) listing under it. */
+  owners: number; lastUsedAt: string | null;
+  /** Searcher-days in the demand window (see codeSearches). */
+  searchers: number;
 }
+export interface CodeSearch { code: string; searchers: number; searches: number; lastDay: string; visibility: "unlisted" | null }
 /** Shown wherever a sysop or a group picks a code. */
 export const UNLISTED_NOTE =
   "A new code starts unlisted: it is never shown in filters, stats or downloads, and only someone who types the exact code finds your listing. Unlisted is not secret, though: anyone who guesses the code sees it.";
@@ -179,6 +184,7 @@ export const api = {
       call<{ ok: true }>(`/api/v1/admin/gateways/${gatewayId}/hide`, { method: "POST", body: JSON.stringify({ hidden, reason }) }),
     imports: () => call<{ imports: StaffImport[] }>("/api/v1/admin/imports"),
     serviceCodes: () => call<{ serviceCodes: StaffServiceCode[] }>("/api/v1/admin/service-codes"),
+    codeSearches: () => call<{ days: number; minSearchers: number; searches: CodeSearch[] }>("/api/v1/admin/service-codes/searches"),
     setServiceCode: (code: string, patch: { visibility?: "public" | "unlisted"; description?: string }) =>
       call<StaffServiceCode>(`/api/v1/admin/service-codes/${encodeURIComponent(code)}`, { method: "PATCH", body: JSON.stringify(patch) }),
     runImport: () => call<{ gateways: number; channels: number }>("/api/v1/admin/imports/winlink", { method: "POST" }),

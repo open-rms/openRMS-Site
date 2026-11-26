@@ -4,7 +4,7 @@
   import { session } from "#lib/auth.ts";
   import {
     api, ago, hasPerm, RANK, type Permissions, type StaffRole, type StaffUser, type StaffClub, type StaffReport, type StaffImport, type StaffAudit, type StaffWatcher,
-    type StaffServiceCode, UNLISTED_NOTE,
+    type StaffServiceCode, type CodeSearch, UNLISTED_NOTE,
   } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.ts";
   import { Input } from "#lib/components/ui/input/index.ts";
@@ -29,6 +29,7 @@
   let reports = $state<StaffReport[]>([]);
   let imports = $state<StaffImport[]>([]);
   let codes = $state<StaffServiceCode[]>([]);
+  let searches = $state<{ days: number; minSearchers: number; searches: CodeSearch[] } | null>(null);
   let codeDesc = $state<Record<string, string>>({});
   let audit = $state<StaffAudit[]>([]);
   let watchers = $state<StaffWatcher[]>([]);
@@ -75,7 +76,7 @@
       if (tab === "reports") reports = (await api.staff.reports()).reports;
       if (tab === "imports") imports = (await api.staff.imports()).imports;
       if (tab === "codes") {
-        codes = (await api.staff.serviceCodes()).serviceCodes;
+        [codes, searches] = await Promise.all([api.staff.serviceCodes().then((r) => r.serviceCodes), api.staff.codeSearches()]);
         codeDesc = Object.fromEntries(codes.map((c) => [c.code, c.description]));
       }
       if (tab === "audit") audit = (await api.staff.audit()).entries;
@@ -248,17 +249,18 @@
     <Card.Root><Card.Content>
       <p class="text-sm text-muted-foreground mt-0">
         Public codes appear in the Site's filter chips, in stats and in downloads. Unlisted codes are never listed anywhere and
-        match only an exact search. {UNLISTED_NOTE} Promote a code only when its group wants it listed; never promote a private
-        group's code (MARS, SHARES, agencies).
+        match only an exact search. {UNLISTED_NOTE} Promote a code when many sysops use it or many people search for it and
+        its group wants it listed; never promote a private group's code (MARS, SHARES, agencies). Only admins see this tab.
       </p>
       <Table.Root>
-        <Table.Header><Table.Row><Table.Head>Code</Table.Head><Table.Head>Visibility</Table.Head><Table.Head>Gateways</Table.Head><Table.Head>Description</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+        <Table.Header><Table.Row><Table.Head>Code</Table.Head><Table.Head>Visibility</Table.Head><Table.Head>Used by</Table.Head><Table.Head title="Searcher-days in the demand window">Searched</Table.Head><Table.Head>Description</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
         <Table.Body>
           {#each codes as c (c.code)}
             <Table.Row>
               <Table.Cell class="font-mono font-bold">{c.code}</Table.Cell>
               <Table.Cell>{#if c.visibility === "public"}<Badge variant="open">public</Badge>{:else}<Badge variant="outline">unlisted</Badge>{/if}</Table.Cell>
-              <Table.Cell class="text-sm">{c.gateways} <span class="text-muted-foreground">({c.channels} ch)</span></Table.Cell>
+              <Table.Cell class="text-sm">{c.gateways} gw · {c.owners} sysop{c.owners === 1 ? "" : "s"}{#if c.lastUsedAt}<div class="text-muted-foreground">{ago(c.lastUsedAt)}</div>{/if}</Table.Cell>
+              <Table.Cell class="text-sm">{c.visibility === "public" ? "" : c.searchers || ""}</Table.Cell>
               <Table.Cell class="text-sm">
                 {#if hasPerm(perms, "servicecode", "edit")}
                   <Input class="h-8" aria-label="Description of {c.code}" bind:value={codeDesc[c.code]}
@@ -278,6 +280,34 @@
           {/each}
         </Table.Body>
       </Table.Root>
+      {#if searches}
+        <h3 class="mt-6 mb-1">Searched for, not public</h3>
+        <p class="text-sm text-muted-foreground mt-0">
+          Codes people looked up in the last {searches.days} days, shown once at least {searches.minSearchers} searcher-days add up
+          (one person on one day counts once). No IPs are stored. Codes nobody lists yet can be made public here too.
+        </p>
+        {#if searches.searches.length === 0}<p class="text-sm text-muted-foreground">Nothing above the threshold yet.</p>{:else}
+          <Table.Root>
+            <Table.Header><Table.Row><Table.Head>Code</Table.Head><Table.Head>Searcher-days</Table.Head><Table.Head>Searches</Table.Head><Table.Head>Last</Table.Head><Table.Head>Listed?</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+            <Table.Body>
+              {#each searches.searches as d (d.code)}
+                <Table.Row>
+                  <Table.Cell class="font-mono font-bold">{d.code}</Table.Cell>
+                  <Table.Cell class="text-sm">{d.searchers}</Table.Cell>
+                  <Table.Cell class="text-sm">{d.searches}</Table.Cell>
+                  <Table.Cell class="text-sm">{d.lastDay}</Table.Cell>
+                  <Table.Cell class="text-sm">{d.visibility ? "unlisted" : "no listings"}</Table.Cell>
+                  <Table.Cell class="text-right">
+                    {#if hasPerm(perms, "servicecode", "edit")}
+                      <Button variant="outline" size="sm" onclick={() => act(() => api.staff.setServiceCode(d.code, { visibility: "public" }), `${d.code} is public.`)}>Make public</Button>
+                    {/if}
+                  </Table.Cell>
+                </Table.Row>
+              {/each}
+            </Table.Body>
+          </Table.Root>
+        {/if}
+      {/if}
     </Card.Content></Card.Root>
   {:else if tab === "watchers"}
     <Card.Root><Card.Content>
