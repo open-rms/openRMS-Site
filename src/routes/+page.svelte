@@ -44,6 +44,7 @@
   const sp = page.url.searchParams;
   let f = $state({
     modem: sp.get("modem")?.split(",").filter(Boolean) ?? [],
+    serviceCode: sp.get("serviceCode")?.toUpperCase().split(",").filter(Boolean) ?? [],
     band: sp.get("band") ?? "",
     status: sp.get("status") ?? "",
     source: sp.get("source") ?? "",
@@ -63,6 +64,7 @@
   function params(): Record<string, string> {
     const p: Record<string, string> = {};
     if (f.modem.length) p.modem = f.modem.join(",");
+    if (f.serviceCode.length) p.serviceCode = f.serviceCode.join(",");
     // String(): number inputs hand over numbers, not text.
     for (const k of ["band", "status", "source", "q", "grid"] as const) if (String(f[k] ?? "").trim()) p[k] = String(f[k]).trim();
     const r = Number(String(f.radius ?? "").trim());
@@ -99,8 +101,18 @@
   function toggleModem(id: string) {
     f.modem = f.modem.includes(id) ? f.modem.filter((m) => m !== id) : [...f.modem, id];
   }
+  function toggleCode(code: string) {
+    f.serviceCode = f.serviceCode.includes(code) ? f.serviceCode.filter((c) => c !== code) : [...f.serviceCode, code];
+  }
+  // Codes with gateways, PUBLIC first, then by how many gateways use them; a code from the URL always shows.
+  const serviceCodes = $derived.by(() => {
+    const counts = stats?.byServiceCode ?? {};
+    const codes = new Set([...Object.keys(counts), ...f.serviceCode]);
+    return [...codes].sort((a, b) => (a === "PUBLIC" ? -1 : b === "PUBLIC" ? 1 : (counts[b] ?? 0) - (counts[a] ?? 0) || a.localeCompare(b)))
+      .map((code) => ({ code, count: counts[code] ?? 0 }));
+  });
   function reset() {
-    f = { modem: [], band: "", status: "", source: "", claimed: false, q: "", grid: "", radius: "" };
+    f = { modem: [], serviceCode: [], band: "", status: "", source: "", claimed: false, q: "", grid: "", radius: "" };
   }
   const modeSummary = (g: Gateway) => {
     const seen = new Map<string, string>();
@@ -151,6 +163,23 @@
               onclick={() => toggleModem(m.id)}
             >
               {m.label}
+            </Button>
+          {/each}
+        </div>
+      </div>
+      <div class="grid gap-1.5">
+        <span class="text-sm font-medium" title="The Winlink service code each channel is listed under, as Pat and Winlink Express ask for it">Service code</span>
+        <div class="flex flex-wrap gap-1.5">
+          {#each serviceCodes as { code, count }}
+            <Button
+              size="xs"
+              variant={f.serviceCode.includes(code) ? "default" : "outline"}
+              class="rounded-full font-mono"
+              aria-pressed={f.serviceCode.includes(code)}
+              title="{count} gateway{count === 1 ? '' : 's'}"
+              onclick={() => toggleCode(code)}
+            >
+              {code}
             </Button>
           {/each}
         </div>

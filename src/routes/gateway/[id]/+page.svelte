@@ -126,7 +126,7 @@
                       <div class="text-muted-foreground text-sm">Winlink lists it as “{c.winlinkSupportedModes}”</div>
                     {/if}
                   </Table.Cell>
-                  <Table.Cell class="font-mono text-sm">{c.serviceCode}</Table.Cell>
+                  <Table.Cell class="font-mono text-sm">{c.feedServiceCode ?? c.serviceCode}</Table.Cell>
                   <Table.Cell class="text-sm">{c.operatingHours}</Table.Cell>
                   <Table.Cell class="text-sm">{c.antenna}{c.notes ? ` · ${c.notes}` : ""}</Table.Cell>
                 </Table.Row>

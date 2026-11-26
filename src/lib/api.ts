@@ -6,7 +6,9 @@ export type Source = "openrms" | "winlink";
 
 export interface Channel {
   id: string; frequencyHz: number; band: string | null; modem: string; modemLabel: string; variant: string | null;
-  modemVersion: string | null; serviceCode: string; operatingHours: string; antenna: string; radioRange: string;
+  modemVersion: string | null; serviceCode: string;
+  /** Code Pat sees in the compat feed (Mercury/XARA/Data2G are forced to their own). */
+  feedServiceCode?: string; operatingHours: string; antenna: string; radioRange: string;
   gridsquare: string | null; baud: string; notes: string; winlinkSupportedModes: string | null; compatSupportedModes: string | null;
 }
 export interface Emcomm {
@@ -31,6 +33,8 @@ export interface Modem {
 export interface Stats {
   gateways: number; channels: number; byModem: Record<string, number>; bySource: Record<string, number>;
   byStatus: Record<string, number>; byBand: Record<string, number>;
+  /** Gateways per service code, as the Winlink-compatible feed publishes it. */
+  byServiceCode?: Record<string, number>;
 }
 
 export interface ManagedCallsign {
