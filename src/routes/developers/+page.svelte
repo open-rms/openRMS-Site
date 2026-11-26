@@ -22,8 +22,9 @@
   </p>
   <pre>curl -s '{origin}/gateway/status.json?ServiceCodes=PUBLIC&ServiceCodes=MERCURY' | jq '.Gateways | length'</pre>
   <p>
-    Gateways on open modes appear in the feed only where a client can actually dial them. Mercury speaks the VARA host protocol,
-    so it appears as <code>VARA</code> under service code <code>MERCURY</code>, the same convention Mercury sysops use on Winlink.
+    Gateways on open modes appear in the feed only where a client can actually dial them. Mercury, XARA and Data2G speak the
+    VARA host protocol, so they appear as <code>VARA</code> under service codes <code>MERCURY</code>, <code>XARA</code> and
+    <code>DATA2G</code>, the same convention their sysops use on Winlink.
     Clients asking only for <code>PUBLIC</code> never get a gateway their VARA modem can't reach.
     Add <code>extensions=1</code> to get the real modem on every channel.
   </p>

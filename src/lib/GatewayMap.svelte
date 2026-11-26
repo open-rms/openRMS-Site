@@ -9,7 +9,7 @@
   let layer: any;
   let L: any;
 
-  const OPEN = new Set(["mercury", "data2g", "modem73", "ion-hf", "freedata", "other"]);
+  const OPEN = new Set(["mercury", "xara", "data2g", "modem73", "ion-hf", "freedata", "other"]);
   const color = (g: Gateway) =>
     g.channels.some((c) => OPEN.has(c.modem)) ? "#d9480f" : g.source === "openrms" ? "#0f5132" : "#2f6fb0";
 

@@ -107,7 +107,7 @@
     for (const c of g.channels) seen.set(c.modem, c.modemLabel);
     return [...seen.entries()];
   };
-  const OPEN = new Set(["mercury", "data2g", "modem73", "ion-hf", "freedata", "other"]);
+  const OPEN = new Set(["mercury", "xara", "data2g", "modem73", "ion-hf", "freedata", "other"]);
 </script>
 
 <section class="mb-5 flex flex-wrap items-end justify-between gap-8">
