@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ACCOUNTS_URL } from "#lib/config.ts";
+  import { ACCOUNTS_URL, ACCOUNTS_UI_URL, ATLAS_AUDIENCE } from "#lib/config.ts";
+  const scopesUrl = `${ATLAS_AUDIENCE.replace(/\/+$/, "")}/.well-known/oauth-protected-resource`;
   const origin = typeof location !== "undefined" ? location.origin : "https://atlas.example";
 </script>
 
@@ -57,9 +58,12 @@ pat rmslist --mode varahf</pre>
   </p>
 
   <h2 id="heartbeat">Gateway heartbeat</h2>
-  <p>Create a key on your <a href="/dashboard">dashboard</a>, then have the gateway report every few minutes:</p>
+  <p>
+    Make a key for Atlas with the <b>heartbeats</b> scope at <a href={`${ACCOUNTS_UI_URL}/keys`}>openRMS Accounts</a>
+    (your <a href="/dashboard">dashboard</a> links there), then have the gateway report every few minutes:
+  </p>
   <pre>curl -s -X POST {origin}/api/v1/gateways/GATEWAY_ID/heartbeat \
-  -H "x-api-key: orms_…" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ormk_…" -H "Content-Type: application/json" \
   -d '&#123;"currentFrequencyHz": 7101500, "currentModem": "mercury", "busy": false, "software": "LinBPQ 6.0.24"&#125;'</pre>
 
   <h2>Query examples</h2>
@@ -67,4 +71,14 @@ pat rmslist --mode varahf</pre>
 GET /api/v1/gateways?grid=DN16&radiusKm=500&band=40m
 GET /api/v1/gateways/W1AW-10
 GET /api/v1/modems</pre>
+
+  <h2 id="keys">API keys</h2>
+  <p>
+    Keys (<code>ormk_…</code>) are made at openRMS Accounts for one service and carry only the scopes you tick.
+    Atlas's scopes: <code>heartbeat</code>, <code>watch:ingest</code>, <code>gateways:read</code> (your own listings)
+    and <code>gateways:write</code> (create, edit and delete them). The list is published at
+    <a href={scopesUrl}><code>/.well-known/oauth-protected-resource</code></a>.
+    Keys never grant moderator or admin powers. A key expires (90 days by default, at most a year); Accounts
+    emails you before it does.
+  </p>
 </div>

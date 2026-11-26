@@ -165,6 +165,25 @@ async function send<T>(url: string, init: RequestInit, auth: "atlas" | "accounts
   return body as T;
 }
 
+/** An openRMS API key for Atlas, as Accounts lists it (identity.md §5; never the key itself). */
+export interface ApiKey {
+  jti: string; aud: string; scopes: string[]; name: string | null; created_at: string; expires_at: string;
+  last_used_at: string | null; renewable: boolean; client_id: string | null; replaces: string | null; replaced_by: string | null;
+}
+
+/** Accounts emails 14 and 3 days before a key expires; the Site warns from 14 days. */
+export const KEY_WARN_DAYS = 14;
+export const daysLeft = (k: Pick<ApiKey, "expires_at">) => Math.floor((new Date(k.expires_at).getTime() - Date.now()) / 86_400_000);
+export const expiresSoon = (k: Pick<ApiKey, "expires_at" | "renewable">) => !k.renewable && daysLeft(k) <= KEY_WARN_DAYS;
+
+/** What each Atlas key scope lets a key do (Atlas's /.well-known/oauth-protected-resource has the same list). */
+export const KEY_SCOPE_LABEL: Record<string, string> = {
+  heartbeat: "heartbeats",
+  "watch:ingest": "watcher uploads",
+  "gateways:read": "read listings",
+  "gateways:write": "edit listings",
+};
+
 /** Atlas API (gateways, watchers, keys, Atlas staff tools). */
 const call = <T>(path: string, init: RequestInit = {}) => send<T>(`${ATLAS_URL}${path}`, init, "atlas");
 /** openRMS-Accounts API (profile, clubs, users and roles). */
@@ -232,8 +251,8 @@ export const api = {
   updateWatcher: (id: string, w: Partial<{ name: string; gridsquare: string | null; locationPrecision: string; public: boolean }>) =>
     call<Watcher>(`/api/v1/me/watchers/${id}`, { method: "PATCH", body: JSON.stringify(w) }),
   deleteWatcher: (id: string) => call<void>(`/api/v1/me/watchers/${id}`, { method: "DELETE" }),
-  mintWatcherKey: (id: string) => call<{ key: string }>(`/api/v1/me/watchers/${id}/key`, { method: "POST" }),
-  revokeWatcherKey: (id: string) => call<void>(`/api/v1/me/watchers/${id}/key`, { method: "DELETE" }),
+  /** Unlink every key from a watcher (it stops uploading here; revoke at Accounts to end the key). */
+  unlinkWatcherKeys: (id: string) => call<void>(`/api/v1/me/watchers/${id}/key`, { method: "DELETE" }),
   sightings: (params: Record<string, string> = {}) =>
     call<{ total: number; sightings: Sighting[] }>(`/api/v1/watch/sightings?${new URLSearchParams(params)}`),
   contributors: (days: number) =>
@@ -248,10 +267,8 @@ export const api = {
   },
   accountsMe: () => acct<{ user: { id: string; callsign: string; role: StaffRole } | null; permissions: Permissions }>("/api/v1/me")
     .catch(() => ({ user: null, permissions: {} as Permissions })),
-  gatewayKeys: () => call<{ keys: { id: string; name: string | null; start: string | null; gatewayIds: string[] | null; createdAt: string }[] }>("/api/v1/me/keys"),
-  createGatewayKey: (name: string, gatewayIds: string[] | null) =>
-    call<{ id: string; key: string }>("/api/v1/me/keys", { method: "POST", body: JSON.stringify({ name, gatewayIds }) }),
-  revokeGatewayKey: (id: string) => call<void>(`/api/v1/me/keys/${id}`, { method: "DELETE" }),
+  /** Your Atlas API keys, listed by Accounts (they are made and revoked at `manage`). */
+  myKeys: () => call<{ keys: ApiKey[]; manage: string; error?: string }>("/api/v1/me/keys"),
   claimable: () => call<{ gateways: (Gateway & { claimedByMe: boolean; claimedByOther: boolean })[] }>("/api/v1/me/claimable"),
   claim: (id: string) => call<{ ok: true }>(`/api/v1/me/gateways/${id}/claim`, { method: "POST" }),
   saveDetails: (id: string, d: { comments: string; software: string | null; emcomm: Emcomm }) =>

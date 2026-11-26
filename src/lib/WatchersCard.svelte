@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, ago, type Watcher } from "./api.ts";
+  import { ACCOUNTS_UI_URL } from "./config.ts";
   import StatusDot from "./StatusDot.svelte";
   import { Label } from "./components/ui/label/index.ts";
   import { Checkbox } from "./components/ui/checkbox/index.ts";
@@ -12,9 +13,7 @@
 
   let watchers = $state<Watcher[]>([]);
   let msg = $state(""), err = $state("");
-  let newKey = $state<{ name: string; key: string } | null>(null);
   let name = $state(""), grid = $state(""), precision = $state("grid4"), isPublic = $state(true);
-  const origin = typeof location !== "undefined" ? location.origin : "";
 
   async function load() {
     watchers = (await api.watchers()).watchers;
@@ -35,21 +34,13 @@
   function create(e: Event) {
     e.preventDefault();
     run(async () => {
-      const w = await api.createWatcher({ name: name.trim(), gridsquare: grid.trim() || null, locationPrecision: precision, public: isPublic });
-      const { key } = await api.mintWatcherKey(w.id);
-      newKey = { name: w.name, key };
+      await api.createWatcher({ name: name.trim(), gridsquare: grid.trim() || null, locationPrecision: precision, public: isPublic });
       name = grid = "";
-    });
+    }, "Watcher added. Link it from openRMS Watch's settings.");
   }
-  function mint(w: Watcher) {
-    if (w.hasKey && !window.confirm(`Replace the key for ${w.name}? The old key stops working immediately.`)) return;
-    run(async () => {
-      newKey = { name: w.name, key: (await api.mintWatcherKey(w.id)).key };
-    });
-  }
-  function revoke(w: Watcher) {
-    if (!window.confirm(`Revoke the key for ${w.name}? It stops uploading; local use keeps working.`)) return;
-    run(() => api.revokeWatcherKey(w.id), "Key revoked.");
+  function unlink(w: Watcher) {
+    if (!window.confirm(`Unlink ${w.name}'s key? It stops uploading; local use keeps working. To end the key everywhere, revoke it at openRMS Accounts.`)) return;
+    run(() => api.unlinkWatcherKeys(w.id), "Key unlinked.");
   }
   function del(w: Watcher) {
     if (!window.confirm(`Delete ${w.name} and everything it uploaded?`)) return;
@@ -64,20 +55,13 @@
     <Card.Title><h2 class="m-0">Watchers</h2></Card.Title>
     <Card.Description>
       An openRMS-Watch receiver can upload the Mercury connections it hears, as independent
-      evidence that listed gateways are on the air. Create a watcher, then paste its key into the watcher's settings.
+      evidence that listed gateways are on the air. In the watcher's settings, sign in to openRMS: it makes its own
+      upload key and links itself to one of these watchers (or a new one). On a box without a browser, make a key with
+      <b>watcher uploads</b> at <a href={`${ACCOUNTS_UI_URL}/keys`}>openRMS Accounts</a> and paste it into the watcher.
       Your location is shown only as precisely as you choose here; exact coordinates are never uploaded.
     </Card.Description>
   </Card.Header>
   <Card.Content>
-    {#if newKey}
-      <div class="bg-primary-soft mb-3 rounded-lg p-3">
-        <b>Upload key for {newKey.name}. Copy it now; it is not shown again.</b>
-        <pre>{newKey.key}</pre>
-        <div class="text-sm">In the watcher's settings: Atlas URL <code>{origin}</code>, key as above.</div>
-        <Button class="mt-2" variant="outline" size="sm" onclick={() => (newKey = null)}>Done</Button>
-      </div>
-    {/if}
-
     {#if watchers.length}
       <Table.Root>
         <Table.Header><Table.Row><Table.Head>Watcher</Table.Head><Table.Head>Shown as</Table.Head><Table.Head>Last upload</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
@@ -97,8 +81,7 @@
               </Table.Cell>
               <Table.Cell class="text-sm">{#if live(w)}<StatusDot status="online" />live{:else}{ago(w.lastSeenAt)}{/if}</Table.Cell>
               <Table.Cell class="text-right whitespace-nowrap">
-                <Button variant="outline" size="sm" onclick={() => mint(w)}>{w.hasKey ? "New key" : "Create key"}</Button>
-                {#if w.hasKey}<Button variant="outline" size="sm" onclick={() => revoke(w)}>Revoke key</Button>{/if}
+                {#if w.hasKey}<Badge variant="outline">linked</Badge> <Button variant="outline" size="sm" onclick={() => unlink(w)}>Unlink key</Button>{:else}<span class="text-muted-foreground text-sm">not linked</span>{/if}
                 <Button variant="destructive" size="sm" onclick={() => del(w)}>Delete</Button>
               </Table.Cell>
             </Table.Row>
